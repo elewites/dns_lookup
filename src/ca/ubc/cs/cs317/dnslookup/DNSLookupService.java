@@ -139,7 +139,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
     // Step 3: Query the nameservers iteratively
     for (CommonResourceRecord rootServer: rootServers ) {
         InetAddress server = DNSCache.stringToInetAddress(rootServer.getTextResult());
-        // System.out.println("Server: " + server.getHostAddress());
+        System.out.println("Querying: " + server.getHostAddress());
         // attempt to query this server
         Set<ResourceRecord> records;
         try {
