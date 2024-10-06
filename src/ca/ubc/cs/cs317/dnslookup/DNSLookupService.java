@@ -351,7 +351,6 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
             verbose.printIndividualResourceRecord(rr, rr.getRecordType().getCode(), rr.getRecordClassCode());
         }
         // Return the set of all resource records
-        System.out.println("Resource Records: " + resourceRecords);
         return resourceRecords; 
     }
 
