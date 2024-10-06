@@ -139,7 +139,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
     // Step 3: Query the nameservers iteratively
     for (CommonResourceRecord rootServer: rootServers ) {
         InetAddress server = DNSCache.stringToInetAddress(rootServer.getTextResult());
-        System.out.println("Server: " + server.getHostAddress());
+        // System.out.println("Server: " + server.getHostAddress());
         // attempt to query this server
         Set<ResourceRecord> records;
         try {
@@ -152,10 +152,15 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
             for (ResourceRecord record: records) {
                 CommonResourceRecord crr = (CommonResourceRecord) record;
                 answers.add(crr);
-                // Handle CNAME records
-                // if (crr.getRecordType() == RecordType.CNAME) {
-                //     // TODO 
-                // }
+                // Handle NS records to get their A records
+                if (crr.getRecordType() == RecordType.NS) {
+                    // Create a new DNS question for the A record of the nameserver
+                    DNSQuestion nsAQuestion = new DNSQuestion(crr.getTextResult(), RecordType.A, question.getRecordClass());
+                    // Query the nameserver to get the A record
+                    Collection<CommonResourceRecord> nsARecords = iterativeQuery(nsAQuestion);
+                    // Add all A records of the nameservers to the answers set
+                    answers.addAll(nsARecords);
+                }
             }
         }
     }
@@ -186,7 +191,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                 DatagramPacket packetToSend = new DatagramPacket(queryData, queryData.length, server, DEFAULT_DNS_PORT);
                 for (int attempt = 0; attempt < MAX_QUERY_ATTEMPTS; attempt++) {
                     try {
-                        verbose.printQueryToSend("upd", question, server, query.getID());
+                        verbose.printQueryToSend("udp", question, server, query.getID());
                         // send packet
                         socket.send(packetToSend);
 
@@ -209,14 +214,12 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                             return tcp_helper(queryData, server);
                         }
                         // process response and return resource records
-                        // Set<ResourceRecord> records =  processResponse(responseMessage);
-                        // System.out.println(records); 
                         return processResponse(responseMessage);
                     } catch (IOException e) {
                         // Timeout: retry query
                         // e.printStackTrace(); 
                         System.out.println(query.toString());
-                        throw new DNSErrorException("Timeout retry query");
+                        // throw new DNSErrorException("Timeout retry query");
                     }
                 }
         return null;
