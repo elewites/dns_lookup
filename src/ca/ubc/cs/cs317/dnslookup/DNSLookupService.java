@@ -218,7 +218,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                     } catch (IOException e) {
                         // Timeout: retry query
                         // e.printStackTrace(); 
-                        System.out.println(query.toString());
+                        // System.out.println(query.toString());
                         // throw new DNSErrorException("Timeout retry query");
                     }
                 }
