@@ -126,6 +126,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
         if (records != null) {
             for (ResourceRecord record: records) {
                 CommonResourceRecord crr = (CommonResourceRecord) record;
+                answers.add(crr);
                 // if (crr.getRecordType() == RecordType.A) {
                 //     answers.add(crr);
                 // }
