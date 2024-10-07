@@ -100,32 +100,6 @@ public class DNSLookupService {
     //  *
     //  *  @param question Host name and record type/class to be used for the query.
     //  */
-    // public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question)
-    //         throws DNSErrorException {
-    //     Set<CommonResourceRecord> answers = new HashSet<>();
-    //     Set<InetAddress> triedServers = new HashSet<>();
-    //     InetAddress currentServer = null;
-    //     int indirectionLevel = 0;
-    //     // Step 1: Retrieve cached results
-    //     List<CommonResourceRecord> cachedResults = cache.getCachedResults(question);
-    //     if (!cachedResults.isEmpty()) {
-    //         answers.addAll(cachedResults);
-    //         return answers;
-    //     }
-    //     System.out.println("Cached Results: " + cachedResults);
-    //     // try {
-    //         // Get the root nameservers from the cache as starting points
-    //     List<CommonResourceRecord> rootServers = cache.getBestNameservers(question);
-    //     System.out.println(rootServers);
-    //         // Pick a random root server to start with
-    //         // currentServer = DNSCache.stringToInetAddress(rootServers.get(random.nextInt(rootServers.size())).getTextResult());
-    //         // System.out.println("Current Server: " + currentServer);
-    //         // Step 2: Query the nameserver
-    //         // individualQueryProcess(question, currentServer);
-    //     // } catch () {
-    //     // }
-    //     return answers;
-    // }
 public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) throws DNSErrorException {
     Set<CommonResourceRecord> answers = new HashSet<>();
     // Step 1: Retrieve cached results for the question
@@ -151,7 +125,9 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
         if (records != null) {
             for (ResourceRecord record: records) {
                 CommonResourceRecord crr = (CommonResourceRecord) record;
-                answers.add(crr);
+                if (crr.getRecordType() == RecordType.A) {
+                    cache.addResult(crr);
+                }
                 // Handle NS records to get their A records
                 if (crr.getRecordType() == RecordType.NS) {
                     // Create a new DNS question for the A record of the nameserver
