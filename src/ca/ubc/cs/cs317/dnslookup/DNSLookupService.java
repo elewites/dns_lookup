@@ -108,6 +108,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
         answers.addAll(cachedResults);
         return answers;
     }
+
     // Step 2: Get the best nameservers for the given question
     List<CommonResourceRecord> rootServers = cache.getBestNameservers(question);
     // Step 3: Query the nameservers iteratively
@@ -125,9 +126,9 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
         if (records != null) {
             for (ResourceRecord record: records) {
                 CommonResourceRecord crr = (CommonResourceRecord) record;
-                if (crr.getRecordType() == RecordType.A) {
-                    answers.add(crr);
-                }
+                // if (crr.getRecordType() == RecordType.A) {
+                //     answers.add(crr);
+                // }
                 // Handle NS records to get their A records
                 if (crr.getRecordType() == RecordType.NS) {
                     // Create a new DNS question for the A record of the nameserver
