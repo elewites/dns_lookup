@@ -211,7 +211,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                             continue; // ignore response
                         }
                         if (responseMessage.getTC()) {
-                            return tcp_helper(queryData, server);
+                            // return tcp_helper(queryData, server);
                         }
                         // process response and return resource records
                         return processResponse(responseMessage);
