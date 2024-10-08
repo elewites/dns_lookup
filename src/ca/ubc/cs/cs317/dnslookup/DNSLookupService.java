@@ -125,12 +125,8 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                     // Create a new DNS question for the NS record
                     DNSQuestion newAQuestion = cache.AQuestion(nameServer.getTextResult());
                     // Recursively resolve the name server's IP address
-                    if (i + 1 >= MAX_INDIRECTION_LEVEL_NS) {
-                        System.err.println("Maximum recursion depth reached, skipping further resolution for: " + newAQuestion);
-                        continue;
-                    }
                     System.out.println("Attempting recursive call with: " + newAQuestion);
-                    iterativeQuery(newAQuestion);
+                    // iterativeQuery(newAQuestion);
                 }
             } catch (Exception e) {
                 System.err.println("Error resolving NS record: " + e.getMessage());
@@ -201,7 +197,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                             continue; // ignore response
                         }
                         if (responseMessage.getTC()) {
-                            // return tcp_helper(queryData, server);
+                            return tcpHelper(queryData, server);
                         }
                         // process response and return resource records
                         return processResponse(responseMessage);
@@ -215,52 +211,28 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
         return null;
     }
     
-    public Set<ResourceRecord> tcp_helper(byte[] queryData, InetAddress server) throws DNSErrorException {
-        try {
-            // create socket
-            Socket socket = new Socket(server, DEFAULT_DNS_PORT);
-            socket.setSoTimeout(SO_TIMEOUT);
-            // create input and output streams
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            // send query
-            out.write(queryData);
-            
-            // logic to read length of response
-            byte[] lengthBuffer = new byte[2];
-            int lengthBytesRead = in.read(lengthBuffer);
-            while (lengthBytesRead < 2) {
-                //  2- lengthBytesRead is the number of bytes left to read
-                int result = in.read(lengthBuffer, lengthBytesRead, 2 - lengthBytesRead);
-                if (result == -1) {
-                    // Handle end of stream (connection closed unexpectedly)
-                    throw new IOException("End of stream reached before reading the length.");
-                }
-                lengthBytesRead += result;
-            }
-            // logic to read response
-            int expectedLength = ((lengthBuffer[0] & 0xFF) << 8) | (lengthBuffer[1] & 0xFF);
-            int totalBytesRead = 0;
-            byte[] responseBuffer = new byte[expectedLength];
-            while (totalBytesRead < expectedLength) {
-                int bytesRead = in.read(responseBuffer, totalBytesRead, expectedLength - totalBytesRead);
-                if (bytesRead == -1) {
-                    // Handle end of stream (connection closed unexpectedly)
-                    throw new IOException("End of stream reached before reading the full response.");
-                }
-                totalBytesRead += bytesRead;
-            }
-            // build message
-            DNSMessage responseMessage = new DNSMessage(responseBuffer, responseBuffer.length);
-            // close socket
-            socket.close();
-            // process response and return resource records
-            return processResponse(responseMessage);
-        } catch (IOException e) {
-            e.printStackTrace();
+public Set<ResourceRecord> tcpHelper(byte[] queryData, InetAddress serverAddress) {
+    try (Socket socket = new Socket(serverAddress, DEFAULT_DNS_PORT)) {
+        // Output stream to send the DNS query
+        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+        out.writeShort(queryData.length); // Write the length of the query
+        out.write(queryData); // Write the query data
+        // Input stream to receive the DNS response
+        DataInputStream in = new DataInputStream(socket.getInputStream());
+        int responseLength = in.readShort(); // Read the length of the response
+        if (responseLength <= 0) {
+            return Collections.emptySet(); // Return empty set if no data
         }
-        return null;
+        byte[] responseData = new byte[responseLength];
+        in.readFully(responseData); // Read the full response
+        // Build and process the DNS message
+        DNSMessage responseMessage = new DNSMessage(responseData, responseData.length);
+        return processResponse(responseMessage);
+    } catch (IOException | DNSErrorException e) {
+        throw new RuntimeException("Error during TCP DNS query", e);
     }
+}
+     
 
     /**
      * Creates a DNSMessage containing a DNS query.
