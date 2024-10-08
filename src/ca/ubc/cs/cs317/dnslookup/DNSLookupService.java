@@ -126,6 +126,10 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                     DNSQuestion newAQuestion = cache.AQuestion(nameServer.getTextResult());
                     // Recursively resolve the name server's IP address
                     // iterativeQuery(newAQuestion);
+                    if (i + 1 >= MAX_INDIRECTION_LEVEL_NS) {
+                        System.err.println("Maximum recursion depth reached, skipping further resolution for: " + newAQuestion);
+                        continue;
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("Error resolving NS record: " + e.getMessage());
@@ -138,7 +142,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                 // Call individualQueryProcess to process DNS question with known name server
                 individualQueryProcess(question, knownServer.getInetResult());
                 foundRecord = true;
-                break; // Exit the loop if succesful
+                break; // Exit the loop if successful
             } catch (DNSErrorException e) {
                 System.err.println("Error processing known name server" + e.getMessage());
             }
