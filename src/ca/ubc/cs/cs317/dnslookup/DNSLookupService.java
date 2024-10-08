@@ -101,48 +101,55 @@ public class DNSLookupService {
     //  *  @param question Host name and record type/class to be used for the query.
     //  */
 public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) throws DNSErrorException {
-    Set<CommonResourceRecord> answers = new HashSet<>();
-    // Step 1: Retrieve cached results for the question
-    List<CommonResourceRecord> cachedResults = cache.getCachedResults(question);
-    if (!cachedResults.isEmpty()) {
-        answers.addAll(cachedResults);
-        return answers;
-    }
-
-    // Step 2: Get the best nameservers for the given question
-    List<CommonResourceRecord> rootServers = cache.getBestNameservers(question);
-    // Step 3: Query the nameservers iteratively
-    for (CommonResourceRecord rootServer: rootServers ) {
-        InetAddress server = DNSCache.stringToInetAddress(rootServer.getTextResult());
-        System.out.println("Querying: " + server.getHostAddress());
-        // attempt to query this server
-        Set<ResourceRecord> records;
-        try {
-            records = individualQueryProcess(question, server);
-        } catch (DNSErrorException e) {
-            e.printStackTrace();
-            continue;
-        }
-        if (records != null) {
-            for (ResourceRecord record: records) {
-                CommonResourceRecord crr = (CommonResourceRecord) record;
-                answers.add(crr);
-                // if (crr.getRecordType() == RecordType.A) {
-                //     answers.add(crr);
-                // }
-                // Handle NS records to get their A records
-                if (crr.getRecordType() == RecordType.NS) {
-                    // Create a new DNS question for the A record of the nameserver
-                    DNSQuestion nsAQuestion = new DNSQuestion(crr.getTextResult(), RecordType.A, question.getRecordClass());
-                    // Query the nameserver to get the A record
-                    Collection<CommonResourceRecord> nsARecords = iterativeQuery(nsAQuestion);
-                    // Add all A records of the nameservers to the answers set
-                    answers.addAll(nsARecords);
-                }
+    Collection<CommonResourceRecord> cacheResults;
+    boolean foundRecord = false;
+    for (int i = 0; i < MAX_INDIRECTION_LEVEL_NS; i++) {
+        // Fetch cached results and search for relevant records
+        cacheResults = cache.getCachedResults(question);
+        for (CommonResourceRecord res : cacheResults) {
+            if (res.getTextResult().equals(question.getHostName()) || res.getRecordType() == RecordType.CNAME) {
+                foundRecord = true;
+                break;
             }
         }
+        // If record found, break out of outer loop
+        if (foundRecord) {
+            break;
+        }
+        // Fetch best name servers
+        Collection<CommonResourceRecord> nameServers = cache.getBestNameservers(question);
+        // Step 1: Resolve NS records to IP addresses if needed
+        for (CommonResourceRecord nameServer : nameServers) {
+            try {
+                if (nameServer.getRecordType() == RecordType.NS) {
+                    // Create a new DNS question for the NS record
+                    DNSQuestion newAQuestion = cache.AQuestion(nameServer.getTextResult());
+                    // Recursively resolve the name server's IP address
+                    iterativeQuery(newAQuestion);
+                }
+            } catch (Exception e) {
+                System.err.println("Error resolving NS record: " + e.getMessage());
+            }
+        }
+        // Step 2: Process known name servers
+        Collection<CommonResourceRecord> knownNS = cache.filterByKnownIPAddress(nameServers);
+        for (CommonResourceRecord knownServer: knownNS) {
+            try {
+                // Call individualQueryProcess to process DNS question with known name server
+                individualQueryProcess(question, knownServer.getInetResult());
+                foundRecord = true;
+                break; // Exit the loop if succesful
+            } catch (DNSErrorException e) {
+                System.err.println("Error processing known name server" + e.getMessage());
+            }
+        }
+        // if processing successful, break out of the outer loop
+        if (foundRecord) {
+            break;
+        }
     }
-    return answers;
+    // return final cached results
+    return cache.getCachedResults(question);
 }
 
     /**
