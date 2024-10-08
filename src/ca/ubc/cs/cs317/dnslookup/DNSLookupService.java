@@ -125,11 +125,12 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                     // Create a new DNS question for the NS record
                     DNSQuestion newAQuestion = cache.AQuestion(nameServer.getTextResult());
                     // Recursively resolve the name server's IP address
-                    // iterativeQuery(newAQuestion);
                     if (i + 1 >= MAX_INDIRECTION_LEVEL_NS) {
                         System.err.println("Maximum recursion depth reached, skipping further resolution for: " + newAQuestion);
                         continue;
                     }
+                    System.out.println("Attempting recursive call with: " + newAQuestion);
+                    iterativeQuery(newAQuestion);
                 }
             } catch (Exception e) {
                 System.err.println("Error resolving NS record: " + e.getMessage());
