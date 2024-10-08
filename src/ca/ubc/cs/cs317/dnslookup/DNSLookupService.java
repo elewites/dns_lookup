@@ -125,7 +125,7 @@ public Collection<CommonResourceRecord> iterativeQuery(DNSQuestion question) thr
                     // Create a new DNS question for the NS record
                     DNSQuestion newAQuestion = cache.AQuestion(nameServer.getTextResult());
                     // Recursively resolve the name server's IP address
-                    iterativeQuery(newAQuestion);
+                    // iterativeQuery(newAQuestion);
                 }
             } catch (Exception e) {
                 System.err.println("Error resolving NS record: " + e.getMessage());
